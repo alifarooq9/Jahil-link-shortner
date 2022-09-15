@@ -1,7 +1,46 @@
 import type { NextPage } from "next";
 import Head from "next/head";
+import { useState } from "react";
+import { toast } from "react-hot-toast";
 
 const Home: NextPage = () => {
+	const [createValue, setCreateValue] = useState<{
+		slug: string;
+		url: string;
+	}>({
+		slug: "",
+		url: "",
+	});
+	const [createdLink, setCreatedLink] = useState<string>("");
+	const [loading, setLoading] = useState<boolean>(false);
+	const handleCreateLink = async () => {
+		if (!createValue.slug || !createValue.url) return;
+
+		setLoading(true);
+		const toastLoading = toast.loading("Creating");
+		const createFetch = await (
+			await fetch("/api/create-link", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					slug: createValue.slug,
+					url: createValue.url,
+				}),
+			})
+		).json();
+		if (!createFetch.success) {
+			toast.error(createFetch.message, {
+				id: toastLoading,
+			});
+			setLoading(false);
+			return;
+		}
+
+		toast.success(createFetch.message, { id: toastLoading });
+		setCreatedLink(createFetch.data.slug);
+		setLoading(false);
+	};
+
 	return (
 		<>
 			<Head>
@@ -10,8 +49,71 @@ const Home: NextPage = () => {
 				<link rel="icon" href="/favicon.ico" />
 			</Head>
 
-			<main className="container mx-auto flex flex-col items-center justify-center min-h-screen p-4">
-				<h1>Hello World</h1>
+			<main className="container mx-auto px-8 max-w-lg flex flex-col items-center justify-center min-h-screen p-4 ">
+				<h1 className="font-semibold text-3xl">Jahil Link Shortner</h1>
+				<div className="flex items-center space-x-3 mt-20 w-full">
+					<h4 className="text-xl">jahil.tk/r/</h4>
+					<input
+						type="text"
+						placeholder="Unique id"
+						value={createValue.slug}
+						onChange={(e) =>
+							setCreateValue({
+								...createValue,
+								slug: e.target.value as string,
+							})
+						}
+						required
+						className="px-5 py-3 rounded-2xl bg-transparent border-2 border-white border-opacity-30 w-full"
+					/>
+				</div>
+				<div className="mt-5 w-full">
+					<p className="font-medium opacity-70">Link</p>
+					<input
+						type="text"
+						placeholder="Any url"
+						onChange={(e) =>
+							setCreateValue({
+								...createValue,
+								url: e.target.value as string,
+							})
+						}
+						value={createValue.url}
+						required
+						className="px-5 py-3 mt-1 rounded-2xl bg-transparent border-2 border-white border-opacity-30 w-full"
+					/>
+				</div>
+				<button
+					disabled={loading}
+					onClick={handleCreateLink}
+					className="mt-6 bg-blue-600 font-semibold w-full h-14 rounded-2xl hover:bg-blue-700 transition-colors duration-300"
+				>
+					{loading ? "Creating..." : "Create a Link"}
+				</button>
+
+				{createdLink && (
+					<div className="mt-16 flex justify-between bg-white bg-opacity-10 px-6 h-14 items-center rounded-2xl w-full">
+						<span>jahil.tk/r/{createdLink}</span>
+						<span
+							onClick={() => {
+								navigator.clipboard.writeText(
+									`jahil.tk/r/${createValue.slug}`
+								);
+							}}
+							className="cursor-pointer flex items-center justify-end active:scale-90 transition-all duration-300 hover:bg-white hover:bg-opacity-20 rounded-full p-2"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="#fff"
+							>
+								<path d="M22 6v16h-16v-16h16zm2-2h-20v20h20v-20zm-24 17v-21h21v2h-19v19h-2z" />
+							</svg>
+						</span>
+					</div>
+				)}
 			</main>
 		</>
 	);
